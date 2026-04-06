@@ -8,7 +8,9 @@ import {
   Settings,
   User,
   Zap,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -21,20 +23,17 @@ const navItems = [
 
 const AppSidebar = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col z-50">
-      {/* Logo */}
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
           <Zap className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="text-lg font-semibold text-sidebar-primary-foreground">
-          AutoJob
-        </span>
+        <span className="text-lg font-semibold text-sidebar-primary-foreground">AutoJob</span>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.to;
@@ -55,7 +54,6 @@ const AppSidebar = () => {
         })}
       </nav>
 
-      {/* User */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
@@ -63,12 +61,13 @@ const AppSidebar = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-accent-foreground truncate">
-              John Doe
+              {user?.user_metadata?.full_name || "User"}
             </p>
-            <p className="text-xs text-sidebar-muted truncate">
-              john@example.com
-            </p>
+            <p className="text-xs text-sidebar-muted truncate">{user?.email}</p>
           </div>
+          <button onClick={signOut} className="text-sidebar-muted hover:text-sidebar-accent-foreground transition-colors">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
