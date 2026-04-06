@@ -1,22 +1,57 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import StatCard from "@/components/StatCard";
 import { TrendingUp, Target, Percent, Clock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
-const monthlyData = [
-  { month: "Jan", sent: 45, replies: 8, interviews: 2 },
-  { month: "Feb", sent: 78, replies: 15, interviews: 4 },
-  { month: "Mar", sent: 159, replies: 28, interviews: 6 },
-];
-
-const responseTimeData = [
-  { range: "< 1 day", count: 12 },
-  { range: "1-3 days", count: 18 },
-  { range: "3-7 days", count: 8 },
-  { range: "1-2 weeks", count: 5 },
-  { range: "> 2 weeks", count: 3 },
-];
+const statusColors: Record<string, string> = {
+  sent: "hsl(210, 100%, 52%)",
+  opened: "hsl(38, 92%, 50%)",
+  replied: "hsl(172, 66%, 40%)",
+  interview: "hsl(152, 60%, 42%)",
+  rejected: "hsl(0, 84%, 60%)",
+  no_response: "hsl(220, 10%, 70%)",
+  draft: "hsl(220, 14%, 80%)",
+};
 
 const Analytics = () => {
+  const { user } = useAuth();
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["applications", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("applications").select("*").eq("user_id", user!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["campaigns", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("campaigns").select("*").eq("user_id", user!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const total = applications.length;
+  const sent = applications.filter((a) => a.status !== "draft").length;
+  const replied = applications.filter((a) => ["replied", "interview"].includes(a.status)).length;
+  const interviews = applications.filter((a) => a.status === "interview").length;
+  const replyRate = sent > 0 ? Math.round((replied / sent) * 100) : 0;
+  const convRate = sent > 0 ? ((interviews / sent) * 100).toFixed(1) : "0";
+
+  const statusBreakdown = Object.entries(
+    applications.reduce((acc, a) => {
+      acc[a.status] = (acc[a.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, count]) => ({ name: name.replace("_", " "), count, color: statusColors[name] || "hsl(220, 10%, 70%)" }));
+
   return (
     <div className="space-y-8">
       <div>
@@ -25,39 +60,59 @@ const Analytics = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Sent" value={282} change="All time" icon={TrendingUp} />
-        <StatCard title="Conversion Rate" value="3.5%" change="Sent → Interview" icon={Target} />
-        <StatCard title="Avg Reply Rate" value="18%" change="Across campaigns" icon={Percent} />
-        <StatCard title="Avg Response Time" value="2.4d" change="From sent to reply" icon={Clock} />
+        <StatCard title="Total Applications" value={total} change="All time" icon={TrendingUp} />
+        <StatCard title="Conversion Rate" value={`${convRate}%`} change="Sent → Interview" icon={Target} />
+        <StatCard title="Reply Rate" value={`${replyRate}%`} change={`${campaigns.length} campaigns`} icon={Percent} />
+        <StatCard title="Active Campaigns" value={campaigns.filter((c) => c.status === "active").length} icon={Clock} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl p-6 shadow-card border border-border">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Monthly Outreach Trend</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(0, 0%, 100%)", border: "1px solid hsl(220, 13%, 91%)", borderRadius: "8px", fontSize: "12px" }} />
-              <Area type="monotone" dataKey="sent" stroke="hsl(172, 66%, 40%)" fill="hsl(172, 66%, 40%)" fillOpacity={0.1} strokeWidth={2} />
-              <Area type="monotone" dataKey="replies" stroke="hsl(210, 100%, 52%)" fill="hsl(210, 100%, 52%)" fillOpacity={0.1} strokeWidth={2} />
-              <Area type="monotone" dataKey="interviews" stroke="hsl(152, 60%, 42%)" fill="hsl(152, 60%, 42%)" fillOpacity={0.1} strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Status Distribution</h2>
+          {statusBreakdown.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={statusBreakdown}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 12 }} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(0, 0%, 100%)", border: "1px solid hsl(220, 13%, 91%)", borderRadius: "8px", fontSize: "12px" }} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {statusBreakdown.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground py-20 text-center">No data yet</p>
+          )}
         </div>
 
         <div className="bg-card rounded-xl p-6 shadow-card border border-border">
-          <h2 className="text-base font-semibold text-card-foreground mb-4">Response Time Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={responseTimeData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" vertical={false} />
-              <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(220, 10%, 46%)", fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(0, 0%, 100%)", border: "1px solid hsl(220, 13%, 91%)", borderRadius: "8px", fontSize: "12px" }} />
-              <Bar dataKey="count" fill="hsl(172, 66%, 40%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h2 className="text-base font-semibold text-card-foreground mb-4">Overview</h2>
+          {statusBreakdown.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="count">
+                    {statusBreakdown.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-2 mt-2">
+                {statusBreakdown.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-muted-foreground capitalize">{item.name}</span>
+                    </div>
+                    <span className="font-medium text-card-foreground">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground py-20 text-center">No data yet</p>
+          )}
         </div>
       </div>
     </div>
