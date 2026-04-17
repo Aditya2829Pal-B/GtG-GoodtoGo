@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { lovable } from "@/integrations/lovable";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
