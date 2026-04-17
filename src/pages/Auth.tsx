@@ -10,6 +10,7 @@ import { lovable } from "@/integrations/lovable";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -22,7 +23,15 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (forgotMode) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({ title: "Check your email", description: "We sent you a password reset link." });
+        setForgotMode(false);
+      } else if (isSignUp) {
         await signUp(email, password, fullName);
         toast({ title: "Account created!", description: "Check your email to confirm your account." });
       } else {
@@ -46,12 +55,12 @@ const Auth = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground">AutoJob</h1>
           <p className="text-sm text-muted-foreground">
-            {isSignUp ? "Create your account" : "Sign in to your account"}
+            {forgotMode ? "Reset your password" : isSignUp ? "Create your account" : "Sign in to your account"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
+          {isSignUp && !forgotMode && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
               <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required />
@@ -61,13 +70,35 @@ const Auth = () => {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" required />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-          </div>
+          {!forgotMode && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+            </div>
+          )}
           <Button type="submit" className="w-full gradient-primary text-primary-foreground" disabled={loading}>
-            {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
+            {loading ? "Loading..." : forgotMode ? "Send reset link" : isSignUp ? "Create Account" : "Sign In"}
           </Button>
+          {forgotMode && (
+            <button
+              type="button"
+              onClick={() => setForgotMode(false)}
+              className="w-full text-center text-sm text-muted-foreground hover:underline"
+            >
+              Back to sign in
+            </button>
+          )}
         </form>
 
         <div className="relative">
