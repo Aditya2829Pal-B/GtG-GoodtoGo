@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
 import type { Status } from "@/components/StatusBadge";
+import ApplicationActions from "@/components/ApplicationActions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -166,6 +167,7 @@ const Applications = () => {
                 <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Campaign</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Activity</th>
+                <th className="text-right px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -198,6 +200,9 @@ const Applications = () => {
                   <td className="px-6 py-4 text-sm text-muted-foreground">{(app as any).campaigns?.name || "—"}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {app.last_activity_at ? new Date(app.last_activity_at).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <ApplicationActions application={app as any} />
                   </td>
                 </tr>
               ))}

@@ -16,44 +16,56 @@ export type Database = {
     Tables: {
       applications: {
         Row: {
+          body: string | null
           campaign_id: string | null
           company: string
           contact_email: string | null
           created_at: string
+          follow_ups_sent: number
           id: string
           last_activity_at: string | null
+          last_follow_up_at: string | null
           notes: string | null
           role: string
           sent_at: string | null
           status: string
+          subject: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          body?: string | null
           campaign_id?: string | null
           company: string
           contact_email?: string | null
           created_at?: string
+          follow_ups_sent?: number
           id?: string
           last_activity_at?: string | null
+          last_follow_up_at?: string | null
           notes?: string | null
           role: string
           sent_at?: string | null
           status?: string
+          subject?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          body?: string | null
           campaign_id?: string | null
           company?: string
           contact_email?: string | null
           created_at?: string
+          follow_ups_sent?: number
           id?: string
           last_activity_at?: string | null
+          last_follow_up_at?: string | null
           notes?: string | null
           role?: string
           sent_at?: string | null
           status?: string
+          subject?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -105,6 +117,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_events: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portfolio_links: {
         Row: {
